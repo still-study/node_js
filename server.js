@@ -1,4 +1,8 @@
+//Lesson 1
+
 const colors = require("colors/safe");
+console.log(colors.blue("Lesson 1"));
+
 let argv = process.argv.splice(2);
 
 let start;
