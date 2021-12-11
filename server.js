@@ -1,61 +1,24 @@
-//Lesson 1
+//Lesson 3
 
-const colors = require("colors/safe");
-console.log(colors.blue("Lesson 1"));
+// По ссылке вы найдете файл с логами запросов к серверу весом более 2 Гб.
+// Напишите программу, которая находит в этом файле все записи
+// с ip-адресами 89.123.1.41 и 34.48.240.111, а также сохраняет их в отдельные файлы
+// с названием “%ip-адрес%_requests.log”.
 
-let argv = process.argv.splice(2);
+const fs = require('fs');
+const ip = ['34.48.240.111', '89.123.1.41'];
 
-let start;
-let end;
+const readStream = new fs.ReadStream('./access.log', 'utf8');
 
-let val = 1;
-let primeNum = [];
+readStream.on('data', data => search(data));
 
-// проверка на присутствие двух аргументов
-if (typeof argv[0] !== 'undefined' && typeof argv[1] !== 'undefined'){
-    start = +argv[0];
-    end = +argv[1];
-
-    // проверка перобразованного аргумента в тип number, если строка, то выведет NaN
-    if (isNaN(start) || isNaN(end)) {
-        console.log(colors.red("Ошибка! Введенные данные не являются числом!"));
-        return;
-    }
-    getPrimeNumber();
-} else {
-    console.log(colors.red("Неверное количество аргументов! Передайте два аргумента."));
-    return;
-}
-
-function getPrimeNumber() {
-    loop: // метка цикла
-        for (let i = start; i <= end; i++) {
-            if (i !== 1 && i !== 0) {
-                for (let j = 2; j < i; j++) {
-                    if (i % j === 0) {
-                        continue loop;
-                    }
-                }
-
-                switch (val){
-                    case val = 1:
-                        console.log(colors.green(i));
-                        val ++;
-                        break;
-                    case val = 2:
-                        console.log(colors.yellow(i));
-                        val++;
-                        break;
-                    case val = 3:
-                        console.log(colors.red(i));
-                        val = 1;
-                        break;
-
-                }
-                primeNum.push(i);
-            }
-        }
-    if (primeNum.length === 0) {
-        console.log(colors.red("Простых чисел в диапазоне нет!"));
-    }
+function search(data) {
+    ip.forEach((ip) => {
+        let reg = new RegExp(`^.*(${ip}).*$`, 'gm');
+        let result = data.match(reg);
+        result.forEach((string) => {
+            console.log(string);
+            fs.writeFile(`./${ip}_requests.log`, string + '\n', {flag: 'a'},(err) => console.log(err));
+        });
+    });
 }
