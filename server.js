@@ -1,24 +1,70 @@
-//Lesson 3
+#!/usr/bin/node
 
-// По ссылке вы найдете файл с логами запросов к серверу весом более 2 Гб.
-// Напишите программу, которая находит в этом файле все записи
-// с ip-адресами 89.123.1.41 и 34.48.240.111, а также сохраняет их в отдельные файлы
-// с названием “%ip-адрес%_requests.log”.
+//Lesson 4
+
+// В домашнем задании вам нужно будет применить полученные знания к программе,
+// которую вы написали по итогам прошлого урока.
+//
+// Для этого превратите её в консольное приложение, по аналогии с разобранным примером
+// и добавьте следующие функции:
+// * Возможность передавать путь к директории в программу. Это актуально,
+//      когда вы не хотите покидать текущую директорию, но вам необходимо просмотреть файл,
+//      находящийся в другом месте;
+// * В содержимом директории переходить во вложенные каталоги;
+// * При чтении файлов искать в них заданную строку или паттерн.
+
 
 const fs = require('fs');
-const ip = ['34.48.240.111', '89.123.1.41'];
+const path = require('path');
+const inquirer = require('inquirer');
 
-const readStream = new fs.ReadStream('./access.log', 'utf8');
 
-readStream.on('data', data => search(data));
 
-function search(data) {
-    ip.forEach((ip) => {
-        let reg = new RegExp(`^.*(${ip}).*$`, 'gm');
-        let result = data.match(reg);
-        result.forEach((string) => {
-            console.log(string);
-            fs.writeFile(`./${ip}_requests.log`, string + '\n', {flag: 'a'},(err) => console.log(err));
+
+inquirer.prompt([
+    {
+        name: 'isPath',
+        type: 'confirm', // input, number, confirm, list, checkbox, password
+        message: 'Указать путь до файла? ',
+    }
+]).then(({ isPath }) => {
+    if (isPath) {
+        inquirer.prompt([
+            {
+                name: 'pathName',
+                type: 'input', // input, number, confirm, list, checkbox, password
+                message: 'Введите путь до файла: ',
+            }
+        ]).then(({ pathName }) => {
+            getList(pathName);
         });
+    } else {
+        getList(process.cwd());
+    }
+});
+
+
+
+function getList(executionDir) {
+    const isFile = (filename) => fs.lstatSync(filename).isFile(); // проверяем на изФайл
+    const list = fs.readdirSync(executionDir); // фильтруем только файлы
+
+    inquirer.prompt([
+        {
+            name: 'dirOrFile',
+            type: 'list', // input, number, confirm, list, checkbox, password
+            message: 'Выберете файл: ',
+            choices: list,
+        }
+    ]).then(({ dirOrFile }) => {
+        const fullPath = path.join(executionDir, dirOrFile);
+
+        if (isFile(fullPath)) {
+            const data = fs.readFileSync(fullPath, 'utf-8');
+
+            console.log(data);
+        } else {
+            getList(fullPath);
+        }
     });
 }
