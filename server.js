@@ -1,70 +1,59 @@
 #!/usr/bin/node
 
-//Lesson 4
+//Lesson 5
 
-// В домашнем задании вам нужно будет применить полученные знания к программе,
-// которую вы написали по итогам прошлого урока.
-//
-// Для этого превратите её в консольное приложение, по аналогии с разобранным примером
-// и добавьте следующие функции:
-// * Возможность передавать путь к директории в программу. Это актуально,
-//      когда вы не хотите покидать текущую директорию, но вам необходимо просмотреть файл,
-//      находящийся в другом месте;
-// * В содержимом директории переходить во вложенные каталоги;
-// * При чтении файлов искать в них заданную строку или паттерн.
+// Используйте наработки из домашнего задания прошлого урока для того, чтобы создать веб-версию приложения.
+// При запуске она должна:
+//  * Показывать содержимое текущей директории;
+//  * Давать возможность навигации по каталогам из исходной папки;
+//  * При выборе файла показывать его содержимое.
 
 
 const fs = require('fs');
 const path = require('path');
-const inquirer = require('inquirer');
+const http = require('http');
 
 
 
-
-inquirer.prompt([
-    {
-        name: 'isPath',
-        type: 'confirm', // input, number, confirm, list, checkbox, password
-        message: 'Указать путь до файла? ',
-    }
-]).then(({ isPath }) => {
-    if (isPath) {
-        inquirer.prompt([
-            {
-                name: 'pathName',
-                type: 'input', // input, number, confirm, list, checkbox, password
-                message: 'Введите путь до файла: ',
-            }
-        ]).then(({ pathName }) => {
-            getList(pathName);
-        });
-    } else {
-        getList(process.cwd());
-    }
-});
-
-
+function isFile(filename) {
+    return fs.lstatSync(filename).isFile();
+}
 
 function getList(executionDir) {
-    const isFile = (filename) => fs.lstatSync(filename).isFile(); // проверяем на изФайл
-    const list = fs.readdirSync(executionDir); // фильтруем только файлы
-
-    inquirer.prompt([
-        {
-            name: 'dirOrFile',
-            type: 'list', // input, number, confirm, list, checkbox, password
-            message: 'Выберете файл: ',
-            choices: list,
-        }
-    ]).then(({ dirOrFile }) => {
-        const fullPath = path.join(executionDir, dirOrFile);
-
-        if (isFile(fullPath)) {
-            const data = fs.readFileSync(fullPath, 'utf-8');
-
-            console.log(data);
-        } else {
-            getList(fullPath);
-        }
-    });
+    return fs.readdirSync(executionDir);
 }
+
+let currentUrl = process.cwd();
+const server = http.createServer((req, res) => {
+    if (req.method === 'GET' && req.url !== '/favicon.ico' && !req.url.includes('/file')) {
+        if(req.url === '/') {
+            currentUrl = process.cwd();
+        }
+        res.writeHead(200, { 'Content-Type': 'text/html'});
+        currentUrl += req.url;
+        currentUrl = path.normalize(currentUrl);
+        getList(currentUrl).forEach((el) => {
+            let pathFile = path.normalize(currentUrl + '/' + el);
+
+            if (isFile(pathFile)) {
+                res.write(`<a href="/file/${el}">${el}</a><br>`);
+            } else {
+
+                res.write(`<a href="/${el}">${el}</a><br>`);
+            }
+        });
+
+        res.end();
+    }
+
+    if (req.url.includes('/file')) {
+        let url = path.normalize(currentUrl + '/' + path.basename(req.url));
+
+        const data = fs.readFileSync(url, 'utf-8');
+        res.writeHead(200, { 'Content-Type': 'text/html'});
+
+        res.end(data);
+    }
+
+})
+server.listen(5555, 'localhost');
