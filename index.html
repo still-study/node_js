@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<script src="https://cdn.socket.io/3.1.1/socket.io.min.js"
+        integrity="sha384-gDaozqUvc4HTgo8iZjwth73C6dDDeOJsAgpxBcMpZYztUfjHXpzrpdrHRdVp8ySO"
+        crossorigin="anonymous"></script>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <title>Lesson 6 WebSockets</title>
+</head>
+<body>
+<h1>WebSoketsChat</h1>
+<div class="content">
+    <div class="left">
+        <p class="usersCountRow">Участники: <span class="count">0</span> чел.</p>
+
+        <div id="users"></div>
+
+    </div>
+    <div class="right">
+        <div id="messages">
+<!--            <div class="msg_block">-->
+<!--                <div class="user_chat">A</div>-->
+<!--                <div class="msg">Lorem ipsum dolor Lorem ipsum dolor sit amet, consectetur adipisicing elit. Eos laudantium magni nemo numquam perferendis ut voluptates voluptatibus! Hic in laudantium quam qui reiciendis? Asperiores beatae consectetur culpa cumque dicta distinctio ducimus eius exercitationem facere fugiat in iste nostrum pariatur, quibusdam rem sequi tempora tenetur velit. Aspernatur at doloremque eius esse. Eos labore praesentium recusandae, repellat rerum saepe. Consectetur error est expedita hic labore quaerat, quis quos velit! Debitis harum itaque laudantium mollitia natus nostrum qui ut voluptate. Aperiam at autem commodi cumque distinctio dolorum eveniet ex maiores minima nam, nihil nostrum, odit officia quas quis ratione repudiandae saepe similique sit? sit amet, consectetur adipisicing elit. Blanditiis, repudiandae?</div>-->
+<!--            </div>-->
+<!--            <div class="msg_block">-->
+<!--                <div class="user_chat">A</div>-->
+<!--                <div class="msg">Hello</div>-->
+<!--            </div>-->
+        </div>
+        <div class="login">
+            <label for="name"></label>
+            <input type="text" id="name" class="input">
+            <input type="submit" id="login" value="Войти в чат" class="send">
+        </div>
+        <div class="send_msg">
+            <label for="input"></label>
+            <input type="text" id="input" class="input">
+            <input type="submit" id="send" value="Отправить" class="send">
+        </div>
+
+    </div>
+</div>
+
+
+</body>
+<script type="text/javascript">
+    const socket = io('localhost:5555');
+    let connectedUsers = [];
+    let isLogin = false;
+    const addMessage = (user, msg) => {
+        const messages = document.getElementById('messages');
+        messages.insertAdjacentHTML('afterbegin', `
+                                        <div class="msg_block">
+                                            <div class="user_chat">${getFirstLetterName(user)}</div>
+                                            <div class="msg">${msg}</div>
+                                        </div>
+        `);
+    };
+
+    socket.on('connect', function () {
+        console.log('Successful connected to server');
+
+    });
+
+    socket.on('SERVER_MSG', function (data) {
+        addMessage(data.user, data.msg);
+    });
+
+    socket.on('showUserConnected', (usersArray) => {
+        showCount(usersArray.length);
+        updateHtmlUserList(usersArray);
+        hideLoginInput();
+    });
+
+    const updateHtmlUserList = (usersArray) => {
+        const users = document.getElementById('users');
+        users.innerHTML = '';
+
+        usersArray.forEach((user) => {
+            users.insertAdjacentHTML('afterbegin', `<div class="user">${user}</div>`);
+        })
+    }
+
+    socket.on('NEW_CONN_EVENT', function (data) {
+        addMessage('',data.msg);
+    });
+
+    socket.on('USER_DISC_EVENT', function (data) {
+        addMessage('',data.msg);
+    });
+    // sessionStorage.setItem('user', 'Goga');
+
+    const hideLoginInput = () => {
+        if (isLogin) {
+            document.querySelector('.send_msg').style.display = 'block';
+        } else {
+            document.querySelector('.login').style.display = 'block';
+        }
+    }
+    hideLoginInput();
+
+    const showCount = (countValue) => {
+        const count = document.querySelector('.count');
+        count.innerHTML = countValue;
+    }
+
+
+
+
+    document.getElementById('login').onclick = function () {
+        const userName = document.getElementById('name').value
+        socket.emit('LOGIN', {msg: userName});
+        document.getElementById('name').value = '';
+        isLogin = userName;
+    };
+
+    document.getElementById('send').onclick = function () {
+        socket.emit('CLIENT_MSG', {msg: document.getElementById('input').value});
+        document.getElementById('input').value = '';
+    };
+
+    const getFirstLetterName = (userName) => {
+        return userName.charAt(0).toUpperCase();
+    }
+</script>
+
+<style>
+    * {
+        padding: 0;
+        margin: 0;
+    }
+
+    h1 {
+        margin-top: 20px;
+        color: #444;
+        text-align: center;
+    }
+
+    .usersCountRow {
+        font-size: 18px;
+        color: #444;
+        text-align: center;
+    }
+
+    .count {
+        color: #a61414;
+    }
+
+    .content {
+        height: 80vh;
+        display: flex;
+        padding: 30px;
+    }
+
+    .left {
+        padding: 20px;
+        border-radius: 10px;
+        width: 30%;
+        background-color: #93C2DC;
+    }
+
+    .right {
+        padding: 20px;
+        margin-left: 30px;
+        border-radius: 10px;
+        width: -webkit-fill-available;
+        background-color: #93C2DC;
+        position: relative;
+    }
+
+    .user {
+        height: max-content;
+        margin-top: 20px;
+        width: min-content;
+        color: #444;
+        padding: 10px;
+        border-radius: 5px;
+        background-color: #ea8f8f;
+    }
+
+    .user_chat {
+        font-size: 40px;
+        text-align: center;
+        line-height: 50px;
+        width: 50px;
+        height: 50px;
+        color: #dadada;
+        border-radius: 50%;
+        background-color: #1a2e41;
+    }
+
+    .msg_block {
+        display: flex;
+        align-items: center;
+        margin-top: 20px;
+    }
+
+    .msg {
+        margin-left: 10px;
+        width: fit-content;
+        height: fit-content;
+        color: #444;
+        padding: 10px;
+        border-radius: 5px;
+        background-color: #fff;
+    }
+
+    .input {
+        margin-left: 10px;
+        margin-right: 10px;
+        width: 300px;
+        height: 40px;
+        padding: 10px;
+        box-sizing: border-box;
+        border-radius: 5px;
+        border: none;
+    }
+
+    .send {
+        color: white;
+        background-color: dodgerblue;
+        width: 100px;
+        height: 40px;
+        border: none;
+        border-radius: 5px;
+    }
+
+    .send_msg {
+        display: none;
+        position: absolute;
+        bottom: 30px;
+    }
+
+    .login {
+        display: none;
+        position: absolute;
+        bottom: 30px;
+    }
+</style>
+</html>
