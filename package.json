@@ -2,19 +2,24 @@
   "name": "GB-NODE_JS",
   "version": "1.0.0",
   "description": "",
-  "main": "server.js",
+  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "nodemon server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "bin": {
-    "reader": "server.js"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/still-study/node_js.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/still-study/node_js/issues"
+  },
+  "homepage": "https://github.com/still-study/node_js#readme",
   "dependencies": {
-    "inquirer": "^8.2.0",
-    "yargs": "^17.3.0"
+    "nodemon": "^2.0.15",
+    "socket.io": "^3.0.3"
   }
 }

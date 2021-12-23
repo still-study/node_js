@@ -1,59 +1,74 @@
-#!/usr/bin/node
-
-//Lesson 5
-
-// Используйте наработки из домашнего задания прошлого урока для того, чтобы создать веб-версию приложения.
-// При запуске она должна:
-//  * Показывать содержимое текущей директории;
-//  * Давать возможность навигации по каталогам из исходной папки;
-//  * При выборе файла показывать его содержимое.
-
-
+const http = require('http');
+const port = 5555;
 const fs = require('fs');
 const path = require('path');
-const http = require('http');
+const filePath = path.join(__dirname, './index.html');
+let readStream = fs.createReadStream(filePath);
 
+let server = http.createServer((request, response) => {
+    if (request.method === 'GET') {
 
+        readStream = fs.createReadStream(filePath);
 
-function isFile(filename) {
-    return fs.lstatSync(filename).isFile();
-}
+        readStream.pipe(response);
+    } else if (request.method === 'POST') {
+        let data = '';
 
-function getList(executionDir) {
-    return fs.readdirSync(executionDir);
-}
-
-let currentUrl = process.cwd();
-const server = http.createServer((req, res) => {
-    if (req.method === 'GET' && req.url !== '/favicon.ico' && !req.url.includes('/file')) {
-        if(req.url === '/') {
-            currentUrl = process.cwd();
-        }
-        res.writeHead(200, { 'Content-Type': 'text/html'});
-        currentUrl += req.url;
-        currentUrl = path.normalize(currentUrl);
-        getList(currentUrl).forEach((el) => {
-            let pathFile = path.normalize(currentUrl + '/' + el);
-
-            if (isFile(pathFile)) {
-                res.write(`<a href="/file/${el}">${el}</a><br>`);
-            } else {
-
-                res.write(`<a href="/${el}">${el}</a><br>`);
-            }
+        request.on('data', chunk => {
+            data += chunk;
         });
 
-        res.end();
+        request.on('end', () => {
+            const parsedData = JSON.parse(data);
+            console.log(parsedData);
+
+            response.writeHead(200, { 'Content-Type': 'json'});
+            response.end(data);
+        });
+    } else {
+        response.statusCode = 405;
+        response.end();
+    }
+});
+
+const io = require('socket.io')(server);
+
+let store = {};
+
+
+io.on('connection', (socket) => {
+    console.log(socket.id);
+    if (Object.values(store).length > 0) {
+        socket.emit('showUserConnected', (Object.values(store)));
     }
 
-    if (req.url.includes('/file')) {
-        let url = path.normalize(currentUrl + '/' + path.basename(req.url));
 
-        const data = fs.readFileSync(url, 'utf-8');
-        res.writeHead(200, { 'Content-Type': 'text/html'});
 
-        res.end(data);
-    }
+    socket.on('CLIENT_MSG', (data) => {
+        console.log(data)
+        io.emit('SERVER_MSG', {
+            user: store[socket.id],
+            msg: data.msg
+        });
+    });
 
-})
-server.listen(5555, 'localhost');
+    socket.on('LOGIN', (data) => {
+        store[socket.id] = data.msg;
+        console.log(Object.values(store));
+        io.emit('showUserConnected', (Object.values(store)));
+        socket.broadcast.emit('NEW_CONN_EVENT', { msg: `${data.msg} вошел в чат...` });
+    })
+
+    socket.on('disconnect', () => {
+        console.log('disconnect user ' + socket.id);
+        // io.emit('userDisconnected', store[socket.id])
+        socket.broadcast.emit('USER_DISC_EVENT', { msg: `${store[socket.id]} покинул чат...` });
+        delete store[socket.id];
+        io.emit('showUserConnected', (Object.values(store)));
+        console.log(store);
+    })
+});
+
+
+
+server.listen(port, 'localhost');
